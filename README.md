@@ -30,6 +30,7 @@ Default command prefix is "?", but can be changed in ./plasma.py.
 
 ## To-do
 
+- Put on Heroku
 - Remove dependency on wikipedia.py (a lot of work is already done by BeautifulSoup)
 - Speed up warship generator by caching nation/type specifications
 - Add commands to warship generator (e.g. lookup specific ships)
