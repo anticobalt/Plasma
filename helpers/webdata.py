@@ -6,6 +6,9 @@ import wikipedia
 
 
 def _load_cache():
+    """
+    :return: Dict
+    """
 
     try:
         with open("data\\cache.pkl", "rb") as file:
@@ -17,6 +20,10 @@ def _load_cache():
 
 
 def _save_cache(classes):
+    """
+    :param classes: List
+    :return: NoneType
+    """
 
     with open("data\\cache.pkl", "wb") as file:
         data = {"warships": classes}
@@ -24,6 +31,10 @@ def _save_cache(classes):
 
 
 def get_warship_classes(force_recache=False):
+    """
+    :param force_recache: Bool
+    :return: List of Dictionaries
+    """
 
     cache = _load_cache()
     if cache and cache.get("warships", None):
@@ -83,20 +94,28 @@ def get_warship_classes(force_recache=False):
     return classes
 
 
-def get_wikipedia_summary(title):
-    """Manually scraps summaries, as wikipedia.py sometimes fails lookup of pages with hyphens in title."""
+def get_wikipedia_summary(wiki_root, title):
+    """
+    Manually scraps summaries, as wikipedia.py sometimes fails lookup of pages with hyphens in title.
+    :param title: Str
+    :return: Str
+    """
 
-    url = "https://en.wikipedia.org/wiki/" + quote(title.replace(" ", "_"))  # Quote fixes unicode errors
+    url = wiki_root + quote(title.replace(" ", "_"))  # Quote fixes unicode errors
     data = urlopen(url)
     soup = BeautifulSoup(data, "html.parser")
-    return "\n\n" + soup.body.p.get_text() + " [m]"
+    return soup.body.p.get_text() + " [m]"
 
 
-def get_wikipedia_first_image(title):
-    """Manually get first image of page."""
+def get_wikipedia_first_image(wiki_root, title):
+    """
+    Manually get first image of page.
+    :param title: Str
+    :return: Str
+    """
 
     try:
-        url = "https://en.wikipedia.org/wiki/" + quote(title.replace(" ", "_"))  # Quote fixes unicode errors
+        url = wiki_root + quote(title.replace(" ", "_"))  # Quote fixes unicode errors
         data = urlopen(url)
         soup = BeautifulSoup(data, "html.parser")
         img = soup.find("table", "infobox").find("img")

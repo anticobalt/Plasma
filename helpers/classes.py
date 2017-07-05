@@ -49,9 +49,26 @@ class Web:
     def __init__(self, bot):
         self._bot = bot
         self._reddit = None
-        self._ship_classes = None
+        self._wikipedia_root = "https://en.wikipedia.org/wiki/"
+        self._ship_classes = []
+        self._generator = None
+        self._last_ship_url = ""
+
+    def _text_generator(self, text):
+        """
+        Generator for text separated by paragraphs (i.e. newlines)
+        :param text: Str
+        :yield: Str
+        """
+        paragraphs = text.split("\n")
+        for paragraph in paragraphs:
+            yield paragraph
 
     def _get_random_ship_class(self, specification):
+        """
+        :param specification: lower-case Str
+        :return: Dict
+        """
 
         while 1:
             ship_class = random.choice(self._ship_classes)
@@ -72,6 +89,7 @@ class Web:
                 (specification == "bb" and t_names[2] in ship_class["ship_type"].lower()) or
                 (specification == "ca" and t_names[3] in ship_class["ship_type"].lower()) or
                 (specification == "cl" and t_names[4] in ship_class["ship_type"].lower()) or
+                (specification == "ss" and t_names[5] in ship_class["ship_type"].lower()) or
                 (specification == "other" and not any(name in ship_class["ship_type"].lower() for name in t_names))
             ):
                 break
@@ -101,10 +119,16 @@ class Web:
         """
 
         # Fetch classes if none exist yet (i.e. first request since bot startup)
-        if self._ship_classes is None:
+        if not self._ship_classes:
             self._ship_classes = webdata.get_warship_classes()
 
+        # Check and modify specification string
+        valid_specs = ["ijn", "usn", "km", "rn", "rm", "fn", "minor", "cv", "dd", "bb", "ca", "cl", "ss", "other"]
         spec = (specification.lower() if specification else specification)
+        if spec not in valid_specs and spec is not None:
+            await self._bot.say("Invalid specification. Defaulting to none ...")
+            spec = None
+
         ship_class = self._get_random_ship_class(spec)
         link = ""
 
@@ -116,16 +140,22 @@ class Web:
             # Try to get summary and link via wikipedia.py
             try:
                 page = wikipedia.page(title=title)
-                summary = "\n\n" + page.summary.split("\n")[0]
-                link = webdata.get_wikipedia_first_image(title)
+                raw_summary = page.summary
+                link = webdata.get_wikipedia_first_image(self._wikipedia_root, title)
 
             # If page load fails, do it yourself
             except wikipedia.exceptions.PageError:
-                summary = webdata.get_wikipedia_summary(title)
-                link = webdata.get_wikipedia_first_image(title)
+                raw_summary = webdata.get_wikipedia_summary(self._wikipedia_root, title)
+                link = webdata.get_wikipedia_first_image(self._wikipedia_root, title)
+
+            # Set generator so that paragraphs can be yield if called by self.more()
+            self._generator = self._text_generator(raw_summary)
+            summary = "\n\n" + next(self._generator)
+            self._last_ship_url = self._wikipedia_root + title.replace(" ", "_")
 
         else:
             summary = ""
+            self._last_ship_url = "No Wikipedia article for this ship exists."
 
         reply = "Class Name: {name}\n" \
                 "Type: {ship_type}\n" \
@@ -144,6 +174,15 @@ class Web:
         await self._bot.say("```\n" + reply + "\n```")
         if link:
             await self._bot.say(link)
+
+    @commands.command()
+    async def more(self):
+        """Gets more information from the last ?warship call."""
+        try:
+            reply = "```\n" + next(self._generator) + "\n```"
+        except (StopIteration, TypeError):
+            reply = (self._last_ship_url if self._last_ship_url else "?warship was not previously called.")
+        await self._bot.say(reply)
 
     @commands.command()
     async def refresh(self):
