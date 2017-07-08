@@ -9,7 +9,7 @@ A Discord bot that generates things.
 
 ## Requirements
 
-- Python 3.5.1
+- Python 3.6.1
 - BeautifulSoup 4.6
 - discord.py 0.16.8
 - PRAW (Python Reddit API Wrapper) 4.5.1
@@ -18,19 +18,9 @@ A Discord bot that generates things.
 These specific versions do work; others might. Obviously newer versions have a higher probability of working than older 
 versions
 
-## How to use
-
-Set environment variables for the following:
-- DISCORD_KEY
-- REDDIT_CLIENT_ID
-- REDDIT_CLIENT_SECRET
-- REDDIT_USER_AGENT
-
-Default command prefix is "?", but can be changed in ./plasma.py.
-
 ## To-do
 
-- Put on Heroku
+- Make bot public
 - Remove dependency on wikipedia.py (a lot of work is already done by BeautifulSoup)
 - Speed up warship generator by caching nation/type specifications
 - Add commands to warship generator (e.g. lookup specific ships)
