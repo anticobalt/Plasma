@@ -3,8 +3,8 @@ import random
 import praw
 import wikipedia
 from discord.ext import commands
+import os
 
-from data import secrets
 from helpers import webdata
 
 
@@ -200,9 +200,9 @@ class Web:
         # Set reddit client once
         if not self._reddit:
             try:
-                self._reddit = praw.Reddit(client_id=secrets.reddit_client_id,
-                                           client_secret=secrets.reddit_client_secret,
-                                           user_agent=secrets.reddit_user_agent)
+                self._reddit = praw.Reddit(client_id=os.environ["REDDIT_CLIENT_ID"],
+                                           client_secret=os.environ["REDDIT_CLIENT_SECRET"],
+                                           user_agent=os.environ["REDDIT_USER_AGENT"])
             except:
                 await self._bot.say("Reddit authorization failed.")
                 return

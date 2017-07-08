@@ -2,8 +2,8 @@ import logging
 
 import discord
 from discord.ext import commands
+import os
 
-from data import secrets
 from helpers import classes
 
 
@@ -29,7 +29,7 @@ def main():
         bot.add_cog(category(bot))
 
     # Start bot
-    bot.run(secrets.discord_key)
+    bot.run(os.environ["DISCORD_KEY"])
 
 
 def set_logging():

@@ -20,11 +20,11 @@ versions
 
 ## How to use
 
-Under ./data/, create file "secrets.py" and set the following values:
-- discord_key
-- reddit_client_id
-- reddit_client_secret
-- reddit_user_agent
+Set environment variables for the following:
+- DISCORD_KEY
+- REDDIT_CLIENT_ID
+- REDDIT_CLIENT_SECRET
+- REDDIT_USER_AGENT
 
 Default command prefix is "?", but can be changed in ./plasma.py.
 
