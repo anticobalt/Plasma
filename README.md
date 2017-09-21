@@ -11,7 +11,7 @@ A Discord bot that generates things.
 
 - Python 3.6.1
 - BeautifulSoup 4.6
-- discord.py 0.16.8
+- discord.py 0.16.11
 - PRAW (Python Reddit API Wrapper) 4.5.1
 - wikipedia.py 1.4
 

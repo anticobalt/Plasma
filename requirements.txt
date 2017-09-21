@@ -1,5 +1,5 @@
 beautifulsoup4==4.6.0
-discord.py==0.16.8
+discord.py==0.16.11
 praw==4.5.1
 wikipedia==1.4.0
 aiohttp
