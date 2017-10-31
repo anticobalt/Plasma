@@ -3,6 +3,7 @@ import pickle
 from urllib.parse import quote
 from urllib.request import urlopen
 import wikipedia
+import json
 
 
 def _load_cache():
@@ -33,18 +34,19 @@ def _save_cache(classes):
 def get_warship_classes(force_recache=False):
     """
     :param force_recache: Bool
-    :return: List of Dictionaries
+    :return: Dictionary
     """
 
     cache = _load_cache()
     if cache and cache.get("warships", None):
         classes = cache["warships"]
     else:
-        classes = []
+        classes = {}
 
-    if not classes or force_recache:
+    if force_recache:
+        classes = {}
 
-        classes = []  # for force recache
+    if not classes:  # if cache load fails or re-cache requested
 
         print("Generating ship class data...")
 
@@ -65,10 +67,11 @@ def get_warship_classes(force_recache=False):
             # If link exists, is not "create new page" request,
             # and if link is not a section of a page
             if link and "?" not in link["href"] and "#" not in link["href"]:
-                page_title = link["title"]  # Hoping the title is similar to the last part of url
+                link_title = link["title"]  # Hoping the title is similar to the last part of url
             else:
-                page_title = None
+                link_title = None
 
+            # Scrap properties
             name = columns[0].get_text()
             ship_type = columns[1].get_text().capitalize()
             faction = columns[2].get_text()
@@ -76,17 +79,31 @@ def get_warship_classes(force_recache=False):
             displacement = columns[4].get_text()
             number = columns[5].get_text()
 
-            classes.append(
-                {
-                    "name": name,
-                    "ship_type": ship_type,
-                    "faction": faction,
-                    "launch_years": launch_years,
-                    "displacement": displacement + " tons",
-                    "number": number + " (wartime/total built)",
-                    "page_title": page_title
-                }
-            )
+            # Modify name to remove subclasses and synonyms
+            name = name.split("(")[0].split("=")[0].rstrip()
+
+            # Find duplicates by link title (because multiple subclasses often point to same page)
+            # Todo: calculate single year/displacement range instead of just concatenating values
+            if link_title in classes:
+                classes[link_title]["launch_years"] += "; " + launch_years
+                classes[link_title]["displacement"] += "; " + displacement
+                classes[link_title]["number"] += " + " + number
+            else:
+                # Manually fixing Wikipedia's errors, because we can't all be perfect
+                if name == "Royal Sovereign":
+                    continue
+                # Todo: handle cases where field is empty; right now it just prints a blank
+                classes[link_title] = {
+                        "name": name,
+                        "ship_type": ship_type,
+                        "faction": faction,
+                        "launch_years": launch_years,
+                        "displacement": displacement + " tons",
+                        "number": number + " (wartime/total built)",
+                        "link_title": link_title
+                        }
+
+        rename_keys(classes)
 
         _save_cache(classes)
         print("Done.")
@@ -146,3 +163,23 @@ def get_wikipedia_first_image(wiki_root, title):
             img_url = ""
 
     return img_url
+
+
+def rename_keys(ships):
+    """
+    Convert keys from link/page titles to names
+    :param ships: Dict
+    :return: Dict
+    """
+    formatted_ships = {}  # In-place alteration of dict causes runtime error
+
+    for link_name, properties in ships.items():
+        formatted_ships[properties["name"]] = properties
+
+    return formatted_ships
+
+
+def save_cache_to_json():
+    data = _load_cache()
+    with open("data\\data.json", "w") as file:
+        json.dump(data, file, indent=4)

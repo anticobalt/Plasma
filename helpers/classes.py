@@ -71,6 +71,7 @@ class Web:
         """
 
         while 1:
+            # Todo: use dictionary (e.g. if dict[specification] in ship_class["faction"] )
             ship_class = random.choice(self._ship_classes)
             f_names = ["Japanese", "United States", "Kriegsmarine", "Royal Navy", "Regia", "French"]
             t_names = ["carrier", "destroyer", "battle", "heavy cruiser", "light cruiser", "submarine"]
@@ -96,8 +97,14 @@ class Web:
 
         return ship_class
 
+    def _get_ship_class(self, name):
+        # Todo: Implement
+        # Todo: Allow searching for individual ships as opposed to ship classes
+        # Todo: Implement fuzzy searching (e.g. Search for 'Bismark' failed. Did you mean 'Bismarck'?)
+        pass
+
     @commands.command()
-    async def warship(self, specification=None):
+    async def warship(self, *, specification: str):
         """
         Gets a random WW2-era warship class via Wikipedia.
         [specification] can be faction acronym (IJN, USN, KM, RN, RM, FN, minor).
@@ -116,6 +123,9 @@ class Web:
         DD = Destroyer
         BB = Battleship/Battlecruiser
         SS = Submarine
+
+        Under construction:
+        Add -s to search for a specific ship by name (e.g. ?warship -s Ark Royal)
         """
 
         # Fetch classes if none exist yet (i.e. first request since bot startup)
@@ -123,19 +133,26 @@ class Web:
             self._ship_classes = webdata.get_warship_classes()
 
         # Check and modify specification string
-        valid_specs = ["ijn", "usn", "km", "rn", "rm", "fn", "minor", "cv", "dd", "bb", "ca", "cl", "ss", "other"]
-        spec = (specification.lower() if specification else specification)
-        if spec not in valid_specs and spec is not None:
-            await self._bot.say("Invalid specification. Defaulting to none ...")
-            spec = None
+        args = specification.split(" ")
+        if args and args[0] == "-s":
+            # search for ship class
+            ship_class = self._get_ship_class(args[1:])
+        else:
+            # Get random based on specification
+            factions = ["ijn", "usn", "km", "rn", "rm", "fn", "minor"]
+            types = ["cv", "dd", "bb", "ca", "cl", "ss", "other"]
+            if specification:
+                specification = specification.lower()
+                if specification not in factions and specification not in types:
+                    await self._bot.say("Invalid specification. Defaulting to none ...")
 
-        ship_class = self._get_random_ship_class(spec)
-        link = ""
+            ship_class = self._get_random_ship_class(specification)
+            link = ""
 
         # Get summary if page exists
-        if ship_class["page_title"]:
+        if ship_class["link_title"]:
 
-            title = ship_class["page_title"]
+            title = ship_class["link_title"]
 
             # Try to get summary and link via wikipedia.py
             try:
@@ -189,6 +206,12 @@ class Web:
         """Re-fetches cached data. Use sparingly."""
         self._ship_classes = webdata.get_warship_classes(force_recache=True)
         await self._bot.say("Data refreshed.")
+
+    @commands.command()
+    async def json(self):
+        """For debugging."""
+        webdata.save_cache_to_json()
+        await self._bot.say("Data saved to JSON file.")
 
     @commands.command()
     async def reddit(self, subreddit):
