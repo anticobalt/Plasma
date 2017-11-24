@@ -23,7 +23,10 @@ def main():
         print("---")
         await bot.change_presence(game=discord.Game(name='on ?help'))
 
-    # Set categories as seen in ?help
+    # Remove default help
+    bot.remove_command("help")
+
+    # Add commands
     categories = (classes.Basic, classes.Web)
     for category in categories:
         bot.add_cog(category(bot))

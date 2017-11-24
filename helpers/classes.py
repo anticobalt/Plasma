@@ -1,11 +1,11 @@
 import random
 
-import praw
-import wikipedia
 from discord.ext import commands
 import os
+import praw
+import wikipedia
 
-from helpers import webdata
+from helpers import constants, webdata
 
 
 class Basic:
@@ -42,6 +42,50 @@ class Basic:
             reply = "I choose {num}.".format(num=random.randint(int(upper), int(lower)))
         await self._bot.say(reply)
 
+    @commands.command()
+    async def help(self, command=None):
+        delimiter = "?"
+        if command is None:
+            s = (
+                "**Commands:**\n\n"
+                "`{d}coin`: flips a coin\n"
+                "`{d}dice`: rolls a dice\n"
+                "`{d}choose <option 1> <option 2> <etc>`: randomly picks from list\n"
+                "`{d}int <optional min> <optional max>`: randomly picks integer from range, default 1-10\n\n"
+                "`{d}reddit <subreddit name>`: gets random hot submission from subreddit\n"
+                "`{d}warship <optional specification>`: under construction\n"
+                "`{d}more`: loads more information from last `{d}warship` call\n"
+                "`{d}refresh`: reloads warship database; use sparingly\n\n"
+                "`{d}help`: displays this list\n"
+                "`{d}help <command>`: displays detailed information about a command"
+            ).format(d=delimiter)
+        elif command == "warship":
+            s = (
+                "```\n"
+                "Gets a random WW2-era warship class via Wikipedia.\n"
+                "[specification] can be faction acronym (IJN, USN, KM, RN, RM, FN, minor).\n"
+                "[specification] can also be a hull type (CV, CA, CL, DD, BB, SS, other).\n\n"
+
+                "IJN = Imperial Japanese Navy\n"
+                "USN = United States Navy\n"
+                "KM = Kriegsmarine (Nazi Germany)\n"
+                "RN = Royal Navy (Britain)\n"
+                "RM = Regia Marina (Kingdom of Italy)\n"
+                "FN = French Navy\n"
+
+                "CV = Aircraft Carrier\n"
+                "CA = Heavy Cruiser\n"
+                "CL = Light Cruiser\n"
+                "DD = Destroyer\n"
+                "BB = Battleship\n"
+                "SS = Submarine\n"
+                "```"
+            )
+        else:
+            s = "Doesn't get any more detailed than what's listed in `{d}help`, kiddo.".format(d=delimiter)
+
+        await self._bot.say(s)
+
 
 class Web:
     """Gets data from various online sources."""
@@ -50,7 +94,8 @@ class Web:
         self._bot = bot
         self._reddit = None
         self._wikipedia_root = "https://en.wikipedia.org/wiki/"
-        self._ship_classes = []
+        self._ship_classes = {}
+        self._ship_spec_table = {}
         self._generator = None
         self._last_ship_url = ""
 
@@ -66,36 +111,17 @@ class Web:
 
     def _get_random_ship_class(self, specification):
         """
-        :param specification: lower-case Str
+        :param specification: lower-case Str; already validated
         :return: Dict
         """
-
-        while 1:
-            # Todo: use dictionary (e.g. if dict[specification] in ship_class["faction"] )
-            ship_class = random.choice(self._ship_classes)
-            f_names = ["Japanese", "United States", "Kriegsmarine", "Royal Navy", "Regia", "French"]
-            t_names = ["carrier", "destroyer", "battle", "heavy cruiser", "light cruiser", "submarine"]
-            if (
-                not specification or
-                (specification == "ijn" and f_names[0] in ship_class["faction"]) or
-                (specification == "usn" and f_names[1] in ship_class["faction"]) or
-                (specification == "km" and f_names[2] in ship_class["faction"]) or
-                (specification == "rn" and f_names[3] in ship_class["faction"]) or
-                (specification == "rm" and f_names[4] in ship_class["faction"]) or
-                (specification == "fn" and f_names[5] in ship_class["faction"]) or
-                (specification == "minor" and not any(name in ship_class["faction"] for name in f_names)) or
-
-                (specification == "cv" and t_names[0] in ship_class["ship_type"].lower()) or
-                (specification == "dd" and t_names[1] in ship_class["ship_type"].lower()) or
-                (specification == "bb" and t_names[2] in ship_class["ship_type"].lower()) or
-                (specification == "ca" and t_names[3] in ship_class["ship_type"].lower()) or
-                (specification == "cl" and t_names[4] in ship_class["ship_type"].lower()) or
-                (specification == "ss" and t_names[5] in ship_class["ship_type"].lower()) or
-                (specification == "other" and not any(name in ship_class["ship_type"].lower() for name in t_names))
-            ):
-                break
-
-        return ship_class
+        expansions = {**constants.NATIONS, **constants.HULL_TYPES}
+        if specification:
+            name = random.sample(self._ship_spec_table[expansions[specification]], 1)[0]
+        else:
+            rand_spec = random.choice(list(expansions.values()))
+            name = random.sample(self._ship_spec_table[rand_spec], 1)[0]
+        choice = self._ship_classes[name]
+        return choice
 
     def _get_ship_class(self, name):
         # Todo: Implement
@@ -103,52 +129,7 @@ class Web:
         # Todo: Implement fuzzy searching (e.g. Search for 'Bismark' failed. Did you mean 'Bismarck'?)
         pass
 
-    @commands.command()
-    async def warship(self, *, specification: str):
-        """
-        Gets a random WW2-era warship class via Wikipedia.
-        [specification] can be faction acronym (IJN, USN, KM, RN, RM, FN, minor).
-        [specification] can also be a hull type (CV, CA, CL, DD, BB, SS, other).
-
-        IJN = Imperial Japanese Navy
-        USN = United States Navy
-        KM = Kriegsmarine (Nazi Germany)
-        RN = Royal Navy (Britain)
-        RM = Regia Marina (Kingdom of Italy)
-        FN = French Navy
-
-        CV = Aircraft Carrier
-        CA = Heavy Cruiser
-        CL = Light Cruiser
-        DD = Destroyer
-        BB = Battleship/Battlecruiser
-        SS = Submarine
-
-        Under construction:
-        Add -s to search for a specific ship by name (e.g. ?warship -s Ark Royal)
-        """
-
-        # Fetch classes if none exist yet (i.e. first request since bot startup)
-        if not self._ship_classes:
-            self._ship_classes = webdata.get_warship_classes()
-
-        # Check and modify specification string
-        args = specification.split(" ")
-        if args and args[0] == "-s":
-            # search for ship class
-            ship_class = self._get_ship_class(args[1:])
-        else:
-            # Get random based on specification
-            factions = ["ijn", "usn", "km", "rn", "rm", "fn", "minor"]
-            types = ["cv", "dd", "bb", "ca", "cl", "ss", "other"]
-            if specification:
-                specification = specification.lower()
-                if specification not in factions and specification not in types:
-                    await self._bot.say("Invalid specification. Defaulting to none ...")
-
-            ship_class = self._get_random_ship_class(specification)
-            link = ""
-
+    def _generate_class_reply(self, ship_class, link):
         # Get summary if page exists
         if ship_class["link_title"]:
 
@@ -165,7 +146,7 @@ class Web:
                 raw_summary = webdata.get_wikipedia_summary(self._wikipedia_root, title)
                 link = webdata.get_wikipedia_first_image(self._wikipedia_root, title)
 
-            # Set generator so that paragraphs can be yield if called by self.more()
+            # Set generator so that paragraphs can be yielded if called by self.more()
             self._generator = self._text_generator(raw_summary)
             summary = "\n\n" + next(self._generator)
             self._last_ship_url = self._wikipedia_root + title.replace(" ", "_")
@@ -188,6 +169,43 @@ class Web:
                                    number=ship_class["number"],
                                    summary=summary)
 
+        return reply
+
+    def _generate_ship_reply(self, ship, link):
+        pass
+
+    @commands.command()
+    async def warship(self, *, str_args: str):
+        """
+        Gets a random WW2-era warship class via Wikipedia.
+        Under construction.
+        -s to search by hull type or faction.
+        """
+
+        # Fetch classes if none exist yet (i.e. first request since bot startup)
+        if not self._ship_classes:
+            self._ship_classes, self._ship_spec_table = webdata.get_warship_data()
+
+        # Check and modify specification string
+        args = str_args.split(" ")
+        if args and args[0] == "-s" and len(args) == 2:
+            # Get random class
+            specification = args[1].lower()
+            if specification:
+                named = set({**constants.NATIONS, **constants.HULL_TYPES}.keys())
+                if not (specification in named or specification == "minor" or specification == "other"):
+                    await self._bot.say("Invalid specification. Defaulting to none ...")
+                    specification = None
+            else:
+                specification = None
+            ship_class = self._get_random_ship_class(specification)
+            link = ""
+            reply = self._generate_class_reply(ship_class, link)
+        elif len(args) == 0:
+            pass  # Get random ship
+        else:
+            pass  # lookup ship from args
+
         await self._bot.say("```\n" + reply + "\n```")
         if link:
             await self._bot.say(link)
@@ -204,7 +222,7 @@ class Web:
     @commands.command()
     async def refresh(self):
         """Re-fetches cached data. Use sparingly."""
-        self._ship_classes = webdata.get_warship_classes(force_recache=True)
+        self._ship_classes, self._ship_spec_table = webdata.get_warship_data(force_recache=True)
         await self._bot.say("Data refreshed.")
 
     @commands.command()
