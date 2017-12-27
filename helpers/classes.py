@@ -65,7 +65,9 @@ class Basic:
             s = (
                 "```\n"
                 "Gets a random WW2-era warship class via Wikipedia.\n"
-                "Use -n to specify a navy/nation, -t to specify a hull type, neither to get totally random ship.\n"
+                "Use -n to specify a navy/nation, -t to specify a hull type.\n"
+                "Enter a name to look a ship up.\n"
+                "Leave it blank to get totally random ship.\n"
                 "\n"
                 "Navies: IJN, USN, KM, RN, RM, FN, minor\n"
                 "Hull types CV, CA, CL, DD, BB, SS, other\n"
@@ -83,8 +85,11 @@ class Basic:
                 "DD = Destroyer\n"
                 "BB = Battleship\n"
                 "SS = Submarine\n"
+                "\n"
+                "CAs, CLs, and SSs are currently broken.\n"
                 "```\n"
-                "Example: `{d}warship -t cv` to get an aircraft carrier or `?warship -n rn` to get a British ship."
+                "Example: `{d}warship -t cv` to get an aircraft carrier or `?warship -n rn` to get a British ship.\n"
+                "`{d}warship` to get a random ship, or `{d}warship Ark Royal` to look up the Ark Royal."
             ).format(d=delimiter)
         else:
             s = "Doesn't get any more detailed than what's listed in `{d}help`, kiddo.".format(d=delimiter)
@@ -148,10 +153,18 @@ class Web:
         return choice_name, choice
 
     def _get_ship(self, name):
-        # Todo: Implement
-        # Todo: Allow searching for individual ships as opposed to ship classes
+        """
+        Get ship by name.
+        :param name: String
+        :return: Dict of ship properties.
+        """
         # Todo: Implement fuzzy searching (e.g. Search for 'Bismark' failed. Did you mean 'Bismarck'?)
-        pass
+        try:
+            ship = self._ship_table[name]
+        except KeyError:
+            return {}
+        else:
+            return ship
 
     def _generate_ship_reply(self, name, ship):
         """
@@ -214,9 +227,9 @@ class Web:
         -s to search by hull type or country.
         """
 
-        arg_err = False
         ship = {}
         name = ""
+        arg_error = False
 
         # Get cache if don't have it yet
         if not self._cached:
@@ -230,26 +243,35 @@ class Web:
                 try:
                     nation = constants.NATIONS[args[1].lower()]
                 except KeyError:
-                    arg_err = True
+                    arg_error = True
                 else:
                     name, ship = self._get_random_ship(table="nation", key=nation)
             elif args[0] == "-t":
                 try:
                     _type = constants.HULL_TYPES[args[1].lower()]
                 except KeyError:
-                    arg_err = True
+                    arg_error = True
                 else:
                     name, ship = self._get_random_ship(table="type", key=_type)
             else:
-                arg_err = True
+                if "-" in args[0]:
+                    # Avoid searching if obvious typo present
+                    arg_error = True
+                else:
+                    name = " ".join(args).title()
+                    ship = self._get_ship(name)
 
-        if arg_err:
-            await self._bot.say("Invalid specification. Defaulting to none ...")
-
-        text, image_link = self._generate_ship_reply(name, ship)
-        await self._bot.say("```\n" + text + "\n```")
-        if image_link:
-            await self._bot.say(image_link)
+        if arg_error:
+            await self._bot.say("Invalid specification. Try again.")
+        else:
+            if ship:
+                # If no ship by now, user entered something wrong
+                text, image_link = self._generate_ship_reply(name, ship)
+                await self._bot.say("```\n" + text + "\n```")
+                if image_link:
+                    await self._bot.say(image_link)
+            else:
+                await self._bot.say("No warship was found. Check arguments and/or spelling.")
 
     @commands.command()
     async def more(self):
