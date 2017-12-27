@@ -3,14 +3,13 @@ NATIONS = {
     "km": "Kriegsmarine",
     "rm": "Regia Marina",
     "ijn": "Imperial Japanese Navy",
-    "fn": "French Navy"
+    "fn": "French Navy",
+    "minor": "minor"
 }
 
 HULL_TYPES = {
-    "ca": "Heavy cruiser",
-    "cv": "Aircraft carrier",
-    "ss": "Submarine",
-    "bb": "Battleship",
-    "dd": "Destroyer",
-    "cl": "Light cruiser"
+    "cv": "aircraft carriers",
+    "bb": "battleships",
 }
+
+TYPE_NAMES = ["battleships", "aircraft carriers"]

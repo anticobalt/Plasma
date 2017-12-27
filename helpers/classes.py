@@ -93,9 +93,12 @@ class Web:
     def __init__(self, bot):
         self._bot = bot
         self._reddit = None
+
         self._wikipedia_root = "https://en.wikipedia.org/wiki/"
-        self._ship_classes = {}
-        self._ship_spec_table = {}
+        self._cached = False
+        self._ship_table = {}
+        self._ship_nation_table = {}
+        self._ship_type_table = {}
         self._generator = None
         self._last_ship_url = ""
 
@@ -109,45 +112,71 @@ class Web:
         for paragraph in paragraphs:
             yield paragraph
 
-    def _get_random_ship_class(self, specification):
+    def _get_random_ship(self, table, key):
         """
-        :param specification: lower-case Str; already validated
-        :return: Dict
-        """
-        expansions = {**constants.NATIONS, **constants.HULL_TYPES}
-        if specification:
-            name = random.sample(self._ship_spec_table[expansions[specification]], 1)[0]
-        else:
-            rand_spec = random.choice(list(expansions.values()))
-            name = random.sample(self._ship_spec_table[rand_spec], 1)[0]
-        choice = self._ship_classes[name]
-        return choice
+        Get random ship based on specifications.
+        If nothing specified, choose random nation then choose random ship from nation.
 
-    def _get_ship_class(self, name):
+        :param table: Str; name of table to look in (i.e. nation or type)
+        :param key: Str; which key in table to look in
+        :return: String and Dict of properties
+        """
+
+        choice = {}
+        choice_name = ""
+
+        if not table and not key:
+            nation = random.choice(list(constants.NATIONS.values()))
+            ships_of_nation = self._ship_nation_table[nation]
+            choice_name = random.choice(ships_of_nation)
+            choice = self._ship_table[choice_name]
+
+        if table == "nation":
+            ships_of_nation = self._ship_nation_table[key]
+            choice_name = random.choice(ships_of_nation)
+            choice = self._ship_table[choice_name]
+        elif table == "type":
+            ships_of_type = self._ship_type_table[key]
+            choice_name = random.choice(ships_of_type)
+            choice = self._ship_table[choice_name]
+
+        return choice_name, choice
+
+    def _get_ship(self, name):
         # Todo: Implement
         # Todo: Allow searching for individual ships as opposed to ship classes
         # Todo: Implement fuzzy searching (e.g. Search for 'Bismark' failed. Did you mean 'Bismarck'?)
         pass
 
-    def _generate_class_reply(self, ship_class, link):
+    def _generate_ship_reply(self, name, ship):
+        """
+        Create discord response.
+        :param name: String, name of the ship
+        :param ship: Dict, properties of the ship
+        :return: Two strings: one for text blurb, one for image url
+        """
+
+        image_link = ""
+
         # Get summary if page exists
-        if ship_class["link_title"]:
+        if ship["link title"]:
 
-            title = ship_class["link_title"]
+            title = ship["link title"]
 
-            # Try to get summary and link via wikipedia.py
+            # Try to get summary and image via wikipedia.py
             try:
                 page = wikipedia.page(title=title)
                 raw_summary = page.summary
-                link = webdata.get_wikipedia_first_image(self._wikipedia_root, title)
+                image_link = webdata.get_wikipedia_first_image(self._wikipedia_root, title)
 
             # If page load fails, do it yourself
             except wikipedia.exceptions.PageError:
                 raw_summary = webdata.get_wikipedia_summary(self._wikipedia_root, title)
-                link = webdata.get_wikipedia_first_image(self._wikipedia_root, title)
+                image_link = webdata.get_wikipedia_first_image(self._wikipedia_root, title)
 
             # Set generator so that paragraphs can be yielded if called by self.more()
             self._generator = self._text_generator(raw_summary)
+            print(raw_summary)
             summary = "\n\n" + next(self._generator)
             self._last_ship_url = self._wikipedia_root + title.replace(" ", "_")
 
@@ -155,60 +184,68 @@ class Web:
             summary = ""
             self._last_ship_url = "No Wikipedia article for this ship exists."
 
-        reply = "Class Name: {name}\n" \
+        blurb = "Name: {name}\n" \
+                "Class: {_class}\n" \
                 "Type: {ship_type}\n" \
-                "Faction: {faction}\n" \
-                "Launch Years: {years}\n" \
+                "Navy: {navy}\n" \
                 "Displacement: {displacement}\n" \
-                "Number in Class: {number}" \
-                "{summary}".format(name=ship_class["name"],
-                                   ship_type=ship_class["ship_type"],
-                                   faction=ship_class["faction"],
-                                   years=ship_class["launch_years"],
-                                   displacement=ship_class["displacement"],
-                                   number=ship_class["number"],
+                "Commissioned: {commissioned}\n" \
+                "Fate: {fate}" \
+                "{summary}".format(name=name,
+                                   _class=ship["class"],
+                                   ship_type=ship["type"],
+                                   navy=ship["country"],
+                                   displacement=ship["displacement"],
+                                   commissioned=ship["commissioned"],
+                                   fate=ship["fate"],
                                    summary=summary)
 
-        return reply
-
-    def _generate_ship_reply(self, ship, link):
-        pass
+        return blurb, image_link
 
     @commands.command()
-    async def warship(self, *, str_args: str):
+    async def warship(self, *, str_args: str = ""):
         """
         Gets a random WW2-era warship class via Wikipedia.
         Under construction.
-        -s to search by hull type or faction.
+        -s to search by hull type or country.
         """
 
-        # Fetch classes if none exist yet (i.e. first request since bot startup)
-        if not self._ship_classes:
-            self._ship_classes, self._ship_spec_table = webdata.get_warship_data()
+        arg_err = False
+        ship = {}
+        name = ""
 
-        # Check and modify specification string
+        # Get cache if don't have it yet
+        if not self._cached:
+            self._ship_table, self._ship_type_table, self._ship_nation_table = webdata.get_warship_data()
+
         args = str_args.split(" ")
-        if args and args[0] == "-s" and len(args) == 2:
-            # Get random class
-            specification = args[1].lower()
-            if specification:
-                named = set({**constants.NATIONS, **constants.HULL_TYPES}.keys())
-                if not (specification in named or specification == "minor" or specification == "other"):
-                    await self._bot.say("Invalid specification. Defaulting to none ...")
-                    specification = None
-            else:
-                specification = None
-            ship_class = self._get_random_ship_class(specification)
-            link = ""
-            reply = self._generate_class_reply(ship_class, link)
-        elif len(args) == 0:
-            pass  # Get random ship
+        if not str_args:
+            name, ship = self._get_random_ship(table="", key="")
         else:
-            pass  # lookup ship from args
+            if args[0] == "-n":
+                try:
+                    nation = constants.NATIONS[args[1].lower()]
+                except KeyError:
+                    arg_err = True
+                else:
+                    name, ship = self._get_random_ship(table="nation", key=nation)
+            elif args[0] == "-t":
+                try:
+                    _type = constants.HULL_TYPES[args[1].lower()]
+                except KeyError:
+                    arg_err = True
+                else:
+                    name, ship = self._get_random_ship(table="type", key=_type)
+            else:
+                arg_err = True
 
-        await self._bot.say("```\n" + reply + "\n```")
-        if link:
-            await self._bot.say(link)
+        if arg_err:
+            await self._bot.say("Invalid specification. Defaulting to none ...")
+
+        text, image_link = self._generate_ship_reply(name, ship)
+        await self._bot.say("```\n" + text + "\n```")
+        if image_link:
+            await self._bot.say(image_link)
 
     @commands.command()
     async def more(self):
@@ -222,7 +259,7 @@ class Web:
     @commands.command()
     async def refresh(self):
         """Re-fetches cached data. Use sparingly."""
-        self._ship_classes, self._ship_spec_table = webdata.get_warship_data(force_recache=True)
+        self._ship_table, self._ship_type_table, self._ship_nation_table = webdata.generate_warship_cache()
         await self._bot.say("Data refreshed.")
 
     @commands.command()
