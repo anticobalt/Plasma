@@ -4,6 +4,7 @@ NATIONS = {
     "rm": "Regia Marina",
     "ijn": "Imperial Japanese Navy",
     "fn": "French Navy",
+    "rn": "Royal Navy",
     "minor": "minor"
 }
 

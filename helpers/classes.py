@@ -47,40 +47,45 @@ class Basic:
         delimiter = "?"
         if command is None:
             s = (
-                "**Commands:**\n\n"
-                "`{d}coin`: flips a coin\n"
-                "`{d}dice`: rolls a dice\n"
-                "`{d}choose <option 1> <option 2> <etc>`: randomly picks from list\n"
-                "`{d}int <optional min> <optional max>`: randomly picks integer from range, default 1-10\n\n"
-                "`{d}reddit <subreddit name>`: gets random hot submission from subreddit\n"
-                "`{d}warship <optional specification>`: under construction\n"
-                "`{d}more`: loads more information from last `{d}warship` call\n"
-                "`{d}refresh`: reloads warship database; use sparingly\n\n"
-                "`{d}help`: displays this list\n"
-                "`{d}help <command>`: displays detailed information about a command"
+                "**Commands:**\n"
+                "```\n"
+                "{d}coin: flips a coin\n"
+                "{d}dice: rolls a dice\n"
+                "{d}choose <option 1> <option 2> <etc>: randomly picks from list\n"
+                "{d}int <optional min> <optional max>: randomly picks integer from range, default 1-10\n\n"
+                "{d}reddit <subreddit name>: gets random hot submission from subreddit\n"
+                "{d}warship <optional specification>: under construction\n"
+                "{d}more: loads more information from last `{d}warship` call\n"
+                "{d}refresh: reloads warship database; use sparingly\n\n"
+                "{d}help: displays this list\n"
+                "{d}help <command>: displays detailed information about a command"
+                "```"
             ).format(d=delimiter)
         elif command == "warship":
             s = (
                 "```\n"
                 "Gets a random WW2-era warship class via Wikipedia.\n"
-                "[specification] can be faction acronym (IJN, USN, KM, RN, RM, FN, minor).\n"
-                "[specification] can also be a hull type (CV, CA, CL, DD, BB, SS, other).\n\n"
-
+                "Use -n to specify a navy/nation, -t to specify a hull type, neither to get totally random ship.\n"
+                "\n"
+                "Navies: IJN, USN, KM, RN, RM, FN, minor\n"
+                "Hull types CV, CA, CL, DD, BB, SS, other\n"
+                "\n"
                 "IJN = Imperial Japanese Navy\n"
                 "USN = United States Navy\n"
                 "KM = Kriegsmarine (Nazi Germany)\n"
                 "RN = Royal Navy (Britain)\n"
                 "RM = Regia Marina (Kingdom of Italy)\n"
                 "FN = French Navy\n"
-
+                "\n"
                 "CV = Aircraft Carrier\n"
                 "CA = Heavy Cruiser\n"
                 "CL = Light Cruiser\n"
                 "DD = Destroyer\n"
                 "BB = Battleship\n"
                 "SS = Submarine\n"
-                "```"
-            )
+                "```\n"
+                "Example: `{d}warship -t cv` to get an aircraft carrier or `?warship -n rn` to get a British ship."
+            ).format(d=delimiter)
         else:
             s = "Doesn't get any more detailed than what's listed in `{d}help`, kiddo.".format(d=delimiter)
 
@@ -176,7 +181,6 @@ class Web:
 
             # Set generator so that paragraphs can be yielded if called by self.more()
             self._generator = self._text_generator(raw_summary)
-            print(raw_summary)
             summary = "\n\n" + next(self._generator)
             self._last_ship_url = self._wikipedia_root + title.replace(" ", "_")
 
@@ -193,11 +197,11 @@ class Web:
                 "Fate: {fate}" \
                 "{summary}".format(name=name,
                                    _class=ship["class"],
-                                   ship_type=ship["type"],
+                                   ship_type=ship["type"].title(),
                                    navy=ship["country"],
                                    displacement=ship["displacement"],
                                    commissioned=ship["commissioned"],
-                                   fate=ship["fate"],
+                                   fate=ship["fate"].title(),  # wikipedia, why are all the months lowercase
                                    summary=summary)
 
         return blurb, image_link
@@ -253,7 +257,10 @@ class Web:
         try:
             reply = "```\n" + next(self._generator) + "\n```"
         except (StopIteration, TypeError):
-            reply = (self._last_ship_url if self._last_ship_url else "?warship was not previously called.")
+            if self._last_ship_url:
+                reply = "Read more online!\n\n" + self._last_ship_url
+            else:
+                reply = "A warship was not previously generated, so there's nothing to get."
         await self._bot.say(reply)
 
     @commands.command()

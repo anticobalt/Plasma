@@ -191,10 +191,6 @@ def scrap_wiki_table_by_type(page_name, ships):
             # the row is incorrectly formatted
             continue
 
-        print(n)
-        n+=1
-        print(ship["name"])
-
         # Add ship to ship dictionary
         # Todo: handle cases where field is empty; right now it just prints a blank
         ships[ship["name"]] = {
