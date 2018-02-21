@@ -4,7 +4,7 @@ import discord
 from discord.ext import commands
 import os
 
-from helpers import classes
+from commands import basic, warship, website
 
 
 def main():
@@ -28,7 +28,7 @@ def main():
     bot.remove_command("help")
 
     # Add commands
-    categories = (classes.Basic, classes.Web)
+    categories = (basic.Basic, warship.Warship, website.Website)
     for category in categories:
         bot.add_cog(category(bot))
 

@@ -5,7 +5,7 @@ A Discord bot that generates things.
 ## Features
 - Flip coin / roll dice / choose random item or number
 - Get a random submission from the front page of a Reddit subreddit
-- Get a random WW2-era warship class from Wikipedia
+- Look up specific or get random WW2-era warship class from Wikipedia
 
 ## Requirements
 
