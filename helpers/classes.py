@@ -86,7 +86,7 @@ class Basic:
                 "BB = Battleship\n"
                 "SS = Submarine\n"
                 "\n"
-                "CAs, CLs, and SSs are currently broken.\n"
+                "DDs, CAs, CLs, and SSs are currently broken.\n"
                 "```\n"
                 "Example: `{d}warship -t cv` to get an aircraft carrier or `{d}warship -n rn` to get a British ship.\n"
                 "`{d}warship` to get a random ship, or `{d}warship Ark Royal` to look up the Ark Royal."

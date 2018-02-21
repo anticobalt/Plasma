@@ -15,16 +15,13 @@ A Discord bot that generates things.
 - PRAW (Python Reddit API Wrapper) 4.5.1
 - wikipedia.py 1.4
 
-These specific versions do work; others might. Obviously newer versions have a higher probability of working than older 
-versions
-
 ## To-do
 
-- Make bot public
+- Use JSON instead of object serialization for caching
+- Add lookup/generation support for DDs, CLs, CAs, SSs; currently omitted as Wikipedia is not comprehensive
 - Remove dependency on wikipedia.py (a lot of work is already done by BeautifulSoup)
-- Speed up warship generator by caching nation/type specifications
-- Add commands to warship generator (e.g. lookup specific ships)
 - More features
+- Update library requirements
 
 ## Bugs
 - If a command is missing arguments, exceptions thrown are uncatchable. Bot continues running though.
