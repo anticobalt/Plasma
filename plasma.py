@@ -14,6 +14,7 @@ def main():
     description = "A generator bot."
     prefix = "?"
     bot = commands.Bot(command_prefix=prefix, description=description)
+    playing_message = 'on {delimiter}help'.format(delimiter=prefix)
 
     @bot.event
     async def on_ready():
@@ -21,7 +22,7 @@ def main():
         print(bot.user.name)
         print(bot.user.id)
         print("---")
-        await bot.change_presence(game=discord.Game(name='on ?help'))
+        await bot.change_presence(game=discord.Game(name=playing_message))
 
     # Remove default help
     bot.remove_command("help")
@@ -32,7 +33,7 @@ def main():
         bot.add_cog(category(bot))
 
     # Start bot
-    bot.run(os.environ["DISCORD_KEY"])
+    bot.run(os.environ["DISCORD_TOKEN"])
 
 
 def set_logging():

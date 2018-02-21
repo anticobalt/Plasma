@@ -54,7 +54,7 @@ class Basic:
                 "{d}choose <option 1> <option 2> <etc>: randomly picks from list\n"
                 "{d}int <optional min> <optional max>: randomly picks integer from range, default 1-10\n\n"
                 "{d}reddit <subreddit name>: gets random hot submission from subreddit\n"
-                "{d}warship <optional specification>: under construction\n"
+                "{d}warship <optional specification>: looks up or gets random WW2-era ships\n"
                 "{d}more: loads more information from last `{d}warship` call\n"
                 "{d}refresh: reloads warship database; use sparingly\n\n"
                 "{d}help: displays this list\n"
