@@ -53,7 +53,7 @@ def generate_warship_cache():
     Fetches data and saves to cache.
     :return: Three Dicts
     """
-    print("Generating ship class data...")
+    print("Generating ship data...")
     ships = {}
     ships_by_nation = {}
     ships_by_type = {}
@@ -343,7 +343,7 @@ class Warship:
     @commands.command()
     async def warship(self, *, str_args: str = ""):
         """
-        Gets a random WW2-era warship class via Wikipedia.
+        Gets a random WW2-era warship via Wikipedia.
         Under construction.
         -s to search by hull type or country.
         """
